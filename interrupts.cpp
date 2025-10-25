@@ -2,10 +2,11 @@
  *
  * @file interrupts.cpp
  * @author Sasisekhar Govind
- *
+ * @author Siddarth Jain
+ * @author Ajay Srirankan
  */
 
-#include<interrupts.hpp>
+#include "interrupts.hpp"
 
 std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string> trace_file, int time, std::vector<std::string> vectors, std::vector<int> delays, std::vector<external_file> external_files, PCB current, std::vector<PCB> wait_queue) {
 
@@ -44,14 +45,29 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             execution +=  std::to_string(current_time) + ", 1, IRET\n";
             current_time += 1;
         } else if(activity == "FORK") {
+            // a. Executes the SYSCALL defined in Assignment 1
             auto [intr, time] = intr_boilerplate(current_time, 2, 10, vectors);
             execution += intr;
             current_time = time;
 
             ///////////////////////////////////////////////////////////////////////////////////////////
             //Add your FORK output here
+            
+            //b. Then, the ISR copies the information needed from the PCB of the parent process to the child process
+            current_time += duration_intr;
+            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", cloning the PCB\n";
+            
+            //TODO: now to actually clone the PCB n stuff
+            //PCB clone(current.PID + 1, ); 
+            //Update memory (partition is assigned here, you must implement this function)
+            //if(!allocate_memory(&current)) {
+            //    std::cerr << "ERROR! Memory allocation failed!" << std::endl;
+            //}
+            //wait_queue.push_back(current);
 
-
+            // c. At the end of the ISR, you call the routine scheduler (), which is, for now, empty (it just displays
+            // “scheduler called”).
+            execution += std::to_string(current_time) + ", 0, scheduler called\n";
 
             ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -91,9 +107,16 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
             ///////////////////////////////////////////////////////////////////////////////////////////
             //With the child's trace, run the child (HINT: think recursion)
+            // NOTE: idk? this is recursion so it should work?
+            //simulate_trace(child_trace, current_time, vectors, delays, external_files, current, wait_queue);
 
+            // d. Return from the ISR (as in Assignment 1)
+            execution +=  std::to_string(current_time) + ", 1, IRET\n";
+            current_time += 1;
 
-
+            // e. Log the snapshot in system status
+            system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
+            system_status += print_PCB(current, wait_queue);
             ///////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -104,9 +127,24 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
             ///////////////////////////////////////////////////////////////////////////////////////////
             //Add your EXEC output here
+            int size_of_program = 10; //hardcoded to test
+            current_time += duration_intr;
+            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", Program is 10 Mb large\n";
 
+            int program_load_time = size_of_program * 15;
+            current_time += program_load_time;
+            execution += std::to_string(current_time) + ", " + std::to_string(program_load_time) + ", loading program into memory\n";
+            
+            current_time += 3;
+            execution += std::to_string(current_time) + ", 3, marking partition as occupied\n";
 
+            current_time += 6;
+            execution += std::to_string(current_time) + ", 6, updating PCB\n";
 
+            execution += std::to_string(current_time) + ", 0, scheduler called\n";
+            
+            current_time += 1;
+            execution +=  std::to_string(current_time) + ", 1, IRET\n";
             ///////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -120,9 +158,10 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
             ///////////////////////////////////////////////////////////////////////////////////////////
             //With the exec's trace (i.e. trace of external program), run the exec (HINT: think recursion)
+            //simulate_trace(exec_traces, current_time, vectors, delays, external_files, current, wait_queue);
 
-
-
+            system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
+            system_status += print_PCB(current, wait_queue);
             ///////////////////////////////////////////////////////////////////////////////////////////
 
             break; //Why is this important? (answer in report)
