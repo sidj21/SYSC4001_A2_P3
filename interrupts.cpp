@@ -57,13 +57,18 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", cloning the PCB\n";
             current_time += duration_intr;
             
-            //TODO: now to actually clone the PCB n stuff
-            //PCB clone(current.PID + 1, ); 
-            //Update memory (partition is assigned here, you must implement this function)
-            //if(!allocate_memory(&current)) {
-            //    std::cerr << "ERROR! Memory allocation failed!" << std::endl;
-            //}
-            //wait_queue.push_back(current);
+            // --- WIP: Getting child --- //
+            PCB current_copy = current;
+            PCB child = current;
+            child.PID += 1; //assuming PIDs are just incremented. 
+            //unsure sure if this will cause issues with a combination of fork & execs,
+            //allowing for two processes with same pid 
+
+            if(!allocate_memory(&child)) {
+                std::cerr << "ERROR! Memory allocation failed!" << std::endl;
+            }
+            wait_queue.push_back(current);
+            // --- END WIP --- //
 
             // c. At the end of the ISR, you call the routine scheduler (), which is, for now, empty (it just displays
             // “scheduler called”).
@@ -120,17 +125,18 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             // --- END DEBUG --- //
 
             // helpppp is this correct
-            auto [child_execution, child_system_status, time_ater_child] = simulate_trace(child_trace, current_time, vectors, delays, external_files, current, wait_queue);
-            
+            auto [child_execution, child_system_status, time_ater_child] = simulate_trace(child_trace, current_time, vectors, delays, external_files, child, wait_queue);
             // this probably goes here?
-            //system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
-            //system_status += print_PCB(current, wait_queue);
-            
+            //free_memory(&child);
+            //NOTE: it's either pop back or free memory. free memory probably works well to integrate it in this code though.
+            //wait_queue.pop_back();
+            system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
+            system_status += print_PCB(child, wait_queue);
+
             // e. Log the snapshot in system status
             execution += child_execution;
             system_status += child_system_status;
             current_time = time_ater_child;
-            
             ///////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -177,11 +183,29 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             // NOTE: DEBUG!
             std::cout << "Program trace:\n";
             for (auto &line : exec_traces) std::cout << "  " << line << "\n";
-            auto [exec_execution, exec_system_status, time_after_exec] = simulate_trace(exec_traces, current_time, vectors, delays, external_files, current, wait_queue);
-            
+
+            free_memory(&current);
             // this probably goes here?
-            //system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
-            //system_status += print_PCB(current, wait_queue);
+            current.program_name = program_name;
+            current.size = program_size;
+            if(!allocate_memory(&current)) {
+                std::cerr << "ERROR! Memory allocation failed!" << std::endl;
+            }
+            wait_queue.clear();
+            
+            // --- marking memory as occupied; is this ever visible? ---
+            //int remaining_mem_space = memory[current.partition_number].size;
+            //if (remaining_mem_space < 0) {
+            //    memory[current.partition_number].code = "occupied";
+            //}
+            // --- marking memory as occupied; is this ever visible? ---
+
+            auto [exec_execution, exec_system_status, time_after_exec] = simulate_trace(exec_traces, current_time, vectors, delays, external_files, current, wait_queue);
+
+            system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
+            system_status += print_PCB(current, wait_queue);
+
+            free(&current);
 
             execution += exec_execution;
             system_status += exec_system_status;
