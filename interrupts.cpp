@@ -115,11 +115,13 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
                 std::cerr << "ERROR! Memory allocation failed!" << std::endl;
             }
 
-            // helpppp is this correct
             auto [child_execution, child_system_status, time_ater_child] = simulate_trace(child_trace, current_time, vectors, delays, external_files, child, wait_queue);
             
             system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
             system_status += print_PCB(child, wait_queue);
+            
+            // child has finished executing, free its memory
+            free_memory(&child);
 
             // e. Log the snapshot in system status
             execution += child_execution;
@@ -167,13 +169,27 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
             ///////////////////////////////////////////////////////////////////////////////////////////
             //With the exec's trace (i.e. trace of external program), run the exec (HINT: think recursion)
+            
+            free_memory(&current);
+
+            current.program_name = program_name;
+            current.size = program_size;
+            if(!allocate_memory(&current)) {
+                std::cerr << "ERROR! Memory allocation failed!" << std::endl;
+            }
+            
+            for (auto iter = wait_queue.begin(); iter != wait_queue.end(); ) {
+                if (iter->PID == current.PID) {
+                    iter = wait_queue.erase(iter);
+                } else {
+                    ++iter;
+                }
+            }
 
             auto [exec_execution, exec_system_status, time_after_exec] = simulate_trace(exec_traces, current_time, vectors, delays, external_files, current, wait_queue);
-
-            //system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
-            //system_status += print_PCB(current, wait_queue);
-
-            //free(&current);
+            
+            system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace + "\n";
+            system_status += print_PCB(current, wait_queue);
 
             execution += exec_execution;
             system_status += exec_system_status;
