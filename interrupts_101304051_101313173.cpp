@@ -140,6 +140,12 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             ///////////////////////////////////////////////////////////////////////////////////////////
             //Add your EXEC output here
             unsigned int program_size = get_size(program_name, external_files);
+
+            if (program_size < 0) {
+                execution += "invalid program size, there's an error!\n";
+                std::cerr << "ERROR! Invalid program size!" << std::endl;
+                break;
+            }
             execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", Program is " + std::to_string(program_size) + " Mb large\n";
             current_time += duration_intr;
             
