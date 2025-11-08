@@ -122,6 +122,8 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             
             // child has finished executing, free its memory
             free_memory(&child);
+            current = wait_queue.back(); // bring parent back to running queue.
+            wait_queue.pop_back(); 
 
             // e. Log the snapshot in system status
             execution += child_execution;
@@ -176,14 +178,6 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             current.size = program_size;
             if(!allocate_memory(&current)) {
                 std::cerr << "ERROR! Memory allocation failed!" << std::endl;
-            }
-            
-            for (auto iter = wait_queue.begin(); iter != wait_queue.end(); ) {
-                if (iter->PID == current.PID) {
-                    iter = wait_queue.erase(iter);
-                } else {
-                    ++iter;
-                }
             }
 
             auto [exec_execution, exec_system_status, time_after_exec] = simulate_trace(exec_traces, current_time, vectors, delays, external_files, current, wait_queue);
